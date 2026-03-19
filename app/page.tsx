@@ -57,32 +57,68 @@ export default function UltraSharpCRM() {
   };
 
   const handleSave = async (e?: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e?.target.files?.[0];
-    if (!newName.trim()) return alert("이름을 입력해주세요.");
-    setUploading(true);
-    try {
-      let imageUrl = customer?.image_url;
-      if (file) {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}.${fileExt}`;
-        const filePath = `customer_photos/${fileName}`;
-        await supabase.storage.from('avatars').upload(filePath, file);
-        const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
-        imageUrl = urlData.publicUrl;
-      }
-      if (isEditMode && customer) {
-        const { data, error } = await supabase.from('customers').update({ name: newName.trim(), phone: newPhone, image_url: imageUrl }).eq('id', customer.id).select().single();
-        if (error) throw error;
-        setCustomer(data); alert("수정되었습니다.");
-      } else {
-        if (!file) throw new Error("사진을 선택해야 합니다.");
-        const { data, error } = await supabase.from('customers').insert([{ name: newName.trim(), phone: newPhone, image_url: imageUrl }]).select().single();
-        if (error) throw error;
-        setCustomer(data); alert("등록되었습니다.");
-      }
-      setIsDialogOpen(false);
-    } catch (err: any) { alert(err.message); } finally { setUploading(false); }
-  };
+  const file = e?.target.files?.[0];
+  if (!newName.trim()) return alert("이름을 입력해주세요.");
+  setUploading(true);
+
+  try {
+    let imageUrl = customer?.image_url;
+
+    if (file) {
+      // 1. 모바일 압축 방지를 위한 이미지 재가공 처리
+      const imageBitmap = await createImageBitmap(file);
+      const canvas = document.createElement('canvas');
+      canvas.width = imageBitmap.width;
+      canvas.height = imageBitmap.height;
+      const ctx = canvas.getContext('2d');
+      ctx?.drawImage(imageBitmap, 0, 0);
+
+      // 2. 최고 품질(1.0)의 Blob 데이터로 변환
+      const blob: Blob = await new Promise((resolve) => {
+        canvas.toBlob((b) => resolve(b!), 'image/jpeg', 1.0); // 1.0이 최고 화질입니다.
+      });
+
+      const fileExt = 'jpg';
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `customer_photos/${fileName}`;
+
+      // 3. 재가공된 고화질 Blob을 업로드
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, blob, { contentType: 'image/jpeg', upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      imageUrl = urlData.publicUrl;
+    }
+
+    // --- 이후 DB 저장 로직 (기존과 동일) ---
+    if (isEditMode && customer) {
+      const { data, error } = await supabase.from('customers').update({ 
+        name: newName.trim(), 
+        phone: newPhone, 
+        image_url: imageUrl 
+      }).eq('id', customer.id).select().single();
+      if (error) throw error;
+      setCustomer(data); alert("수정되었습니다.");
+    } else {
+      if (!file) throw new Error("사진을 선택해야 합니다.");
+      const { data, error } = await supabase.from('customers').insert([{ 
+        name: newName.trim(), 
+        phone: newPhone, 
+        image_url: imageUrl 
+      }]).select().single();
+      if (error) throw error;
+      setCustomer(data); alert("등록되었습니다.");
+    }
+    setIsDialogOpen(false);
+  } catch (err: any) { 
+    alert("에러 발생: " + err.message); 
+  } finally { 
+    setUploading(false); 
+  }
+};
 
   const handleSearch = async () => {
     if (!searchName.trim()) return;
