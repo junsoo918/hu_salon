@@ -9,7 +9,8 @@ import {
   Dialog, 
   DialogContent, 
   DialogHeader, 
-  DialogTitle 
+  DialogTitle,
+  DialogDescription 
 } from "@/components/ui/dialog"
 import { Search, UserPlus, Trash2, ImageIcon, Loader2, User, Pencil } from "lucide-react"
 
@@ -31,6 +32,16 @@ export default function UltraSharpCRM() {
 
   useEffect(() => { resetZoom(); }, [customer]);
   const resetZoom = () => { setScale(1); setPosition({ x: 0, y: 0 }); setIsDragging(false); };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/[^0-9]/g, "");
+    let result = "";
+    if (value.length < 4) result = value;
+    else if (value.length < 7) result = value.substr(0, 3) + "-" + value.substr(3);
+    else if (value.length < 11) result = value.substr(0, 3) + "-" + value.substr(3, 3) + "-" + value.substr(6);
+    else result = value.substr(0, 3) + "-" + value.substr(3, 4) + "-" + value.substr(7, 4);
+    setNewPhone(result);
+  };
 
   const handleDelete = async () => {
     if (!customer || !confirm(`${customer.name} 고객 정보를 삭제할까요?`)) return;
@@ -92,9 +103,13 @@ export default function UltraSharpCRM() {
           </Button>
 
           {customer && (
-            <div className="flex items-center gap-2 bg-blue-50 px-2 h-9 rounded-lg border border-blue-100 flex-1 min-w-0">
-              <span className="font-extrabold text-slate-800 text-sm truncate">{customer.name}</span>
-              <div className="flex items-center gap-0.5 ml-auto">
+            <div className="flex items-center gap-2 bg-blue-50 px-2.5 h-9 rounded-lg border border-blue-100 flex-1 min-w-0">
+              {/* 한 줄 표시를 위한 flex-row 설정 */}
+              <div className="flex items-baseline gap-2 min-w-0 overflow-hidden">
+                <span className="font-extrabold text-slate-800 text-[18px] truncate shrink-0">{customer.name}</span>
+                <span className="text-[1px] text-blue-600 font-bold truncate">{customer.phone}</span>
+              </div>
+              <div className="flex items-center gap-0.5 ml-auto shrink-0">
                 <Button variant="ghost" size="icon" className="h-7 w-7 text-blue-500" onClick={() => { setIsEditMode(true); setNewName(customer.name); setNewPhone(customer.phone); setIsDialogOpen(true); }}>
                   <Pencil className="w-3.5 h-3.5" />
                 </Button>
@@ -116,16 +131,20 @@ export default function UltraSharpCRM() {
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="w-[92vw] max-w-[400px] rounded-2xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold">{isEditMode ? "정보 수정" : "고객 등록"}</DialogTitle>
+            <DialogDescription className="sr-only">고객의 이름과 연락처를 입력하세요.</DialogDescription>
+          </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-1.5"><Label className="text-xs font-bold text-slate-500">이름</Label><Input value={newName} onChange={(e)=>setNewName(e.target.value)} className="text-base" /></div>
-            <div className="space-y-1.5"><Label className="text-xs font-bold text-slate-500">연락처</Label><Input value={newPhone} onChange={(e)=>setNewPhone(e.target.value)} className="text-base" /></div>
+            <div className="space-y-1.5"><Label className="text-xs font-bold text-slate-500">연락처</Label><Input type="tel" value={newPhone} onChange={handlePhoneChange} placeholder="010-0000-0000" className="text-base" /></div>
             <div className="pt-2">
               <Input type="file" accept="image/*" onChange={handleSave} className="hidden" id="file-up" />
               <Label htmlFor="file-up" className="flex flex-col items-center justify-center border-2 border-dashed border-slate-200 p-8 rounded-xl cursor-pointer bg-slate-50 text-slate-400">
                 {uploading ? <Loader2 className="animate-spin" /> : <><ImageIcon className="mb-2" /><span className="text-xs">{isEditMode ? "사진 변경 (선택)" : "사진 선택 (필수)"}</span></>}
               </Label>
             </div>
-            {isEditMode && <Button onClick={() => handleSave()} className="w-full bg-blue-600 font-bold h-12 rounded-xl mt-2" disabled={uploading}>수정 완료</Button>}
+            {isEditMode && <Button onClick={() => handleSave()} className="w-full bg-blue-600 font-bold h-12 rounded-xl mt-2 text-white" disabled={uploading}>수정 완료</Button>}
           </div>
         </DialogContent>
       </Dialog>
@@ -149,13 +168,13 @@ export default function UltraSharpCRM() {
               onDragStart={(e) => e.preventDefault()}
               className="max-h-full max-w-full object-contain pointer-events-auto cursor-move"
               style={{ 
-                /* --- 아이폰 사파리 화질 깨짐 방지 핵심 설정 --- */
+                /* --- 아이폰 사파리 화질 고정 설정 --- */
                 transform: `translate3d(${position.x}px, ${position.y}px, 0) scale(${scale})`,
-                imageRendering: '-webkit-optimize-contrast', // 대비를 통한 선명도 향상
-                WebkitBackfaceVisibility: 'hidden',           // 깜빡임 방지
-                WebkitPerspective: '1000',                     // 3D 가속 유도
-                WebkitTransformStyle: 'preserve-3d',           // 고해상도 유지 강제
-                willChange: 'transform'                        // 성능 최적화
+                imageRendering: '-webkit-optimize-contrast',
+                WebkitBackfaceVisibility: 'hidden',
+                WebkitPerspective: '1000',
+                WebkitTransformStyle: 'preserve-3d',
+                willChange: 'transform'
               }}
             />
             <div className="absolute bottom-8 right-5 z-20 pointer-events-auto">
