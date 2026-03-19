@@ -12,12 +12,17 @@ import {
   DialogTitle,
   DialogDescription 
 } from "@/components/ui/dialog"
-import { Search, UserPlus, Trash2, ImageIcon, Loader2, User, Pencil } from "lucide-react"
+import { Search, UserPlus, Trash2, ImageIcon, Loader2, User, Pencil, ChevronRight } from "lucide-react"
 
 export default function UltraSharpCRM() {
   const [searchName, setSearchName] = useState("")
   const [customer, setCustomer] = useState<any>(null)
   const [loading, setLoading] = useState(false)
+  
+  // --- 동명이인 선택용 상태 ---
+  const [duplicateList, setDuplicateList] = useState<any[]>([])
+  const [isSelectOpen, setIsSelectOpen] = useState(false)
+
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isEditMode, setIsEditMode] = useState(false)
   const [newName, setNewName] = useState("")
@@ -82,10 +87,22 @@ export default function UltraSharpCRM() {
   const handleSearch = async () => {
     if (!searchName.trim()) return;
     setLoading(true);
-    const { data } = await supabase.from('customers').select('*').eq('name', searchName.trim()).maybeSingle();
-    if (data) setCustomer(data);
-    else alert("결과가 없습니다.");
+    // .maybeSingle() 대신 .select()로 모두 가져옴
+    const { data, error } = await supabase.from('customers').select('*').eq('name', searchName.trim());
+    
     setLoading(false);
+    if (error || !data || data.length === 0) {
+      alert("결과가 없습니다.");
+      return;
+    }
+
+    if (data.length === 1) {
+      setCustomer(data[0]);
+    } else {
+      // 2명 이상일 경우 목록 팝업 열기
+      setDuplicateList(data);
+      setIsSelectOpen(true);
+    }
   };
 
   const handleStart = (clientX: number, clientY: number) => { if (scale > 1) { setIsDragging(true); setStartPos({ x: clientX - position.x, y: clientY - position.y }); } };
@@ -104,10 +121,9 @@ export default function UltraSharpCRM() {
 
           {customer && (
             <div className="flex items-center gap-2 bg-blue-50 px-2.5 h-9 rounded-lg border border-blue-100 flex-1 min-w-0">
-              {/* 한 줄 표시를 위한 flex-row 설정 */}
               <div className="flex items-baseline gap-2 min-w-0 overflow-hidden">
                 <span className="font-extrabold text-slate-800 text-[18px] truncate shrink-0">{customer.name}</span>
-                <span className="text-[1px] text-blue-600 font-bold truncate">{customer.phone}</span>
+                <span className="text-[18px] text-blue-600 font-bold truncate">{customer.phone}</span>
               </div>
               <div className="flex items-center gap-0.5 ml-auto shrink-0">
                 <Button variant="ghost" size="icon" className="h-7 w-7 text-blue-500" onClick={() => { setIsEditMode(true); setNewName(customer.name); setNewPhone(customer.phone); setIsDialogOpen(true); }}>
@@ -128,6 +144,34 @@ export default function UltraSharpCRM() {
           </Button>
         </div>
       </header>
+
+      {/* --- 동명이인 선택 다이얼로그 추가 --- */}
+      <Dialog open={isSelectOpen} onOpenChange={setIsSelectOpen}>
+        <DialogContent className="w-[92vw] max-w-[400px] rounded-2xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold">찾으시는 고객을 선택해 주세요.</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4 space-y-2 max-h-[40vh] overflow-y-auto">
+            {duplicateList.map((person) => (
+              <Button 
+                key={person.id} 
+                variant="outline" 
+                className="w-full h-14 justify-between px-4 border-slate-200 hover:bg-blue-50 hover:border-blue-200"
+                onClick={() => {
+                  setCustomer(person);
+                  setIsSelectOpen(false);
+                }}
+              >
+                <div className="flex flex-col items-start">
+                  <span className="font-bold text-slate-800">{person.name}</span>
+                  <span className="text-base text-slate-500">{person.phone}</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400" />
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="w-[92vw] max-w-[400px] rounded-2xl p-6">
@@ -168,7 +212,6 @@ export default function UltraSharpCRM() {
               onDragStart={(e) => e.preventDefault()}
               className="max-h-full max-w-full object-contain pointer-events-auto cursor-move"
               style={{ 
-                /* --- 아이폰 사파리 화질 고정 설정 --- */
                 transform: `translate3d(${position.x}px, ${position.y}px, 0) scale(${scale})`,
                 imageRendering: '-webkit-optimize-contrast',
                 WebkitBackfaceVisibility: 'hidden',
