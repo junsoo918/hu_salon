@@ -194,40 +194,57 @@ export default function UltraSharpCRM() {
       </Dialog>
 
       <section 
-        className="flex-1 relative bg-slate-200 flex items-center justify-center overflow-hidden touch-none"
-        onWheel={handleWheel}
-        onMouseDown={(e) => handleStart(e.clientX, e.clientY)}
-        onMouseMove={(e) => handleMove(e.clientX, e.clientY)}
-        onMouseUp={() => setIsDragging(false)}
-        onMouseLeave={() => setIsDragging(false)}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={() => { setIsDragging(false); setInitialDistance(null); }}
-      >
-        {customer ? (
-          <div className="w-full h-full flex items-center justify-center relative pointer-events-none overflow-hidden">
-            <img 
-              src={customer.image_url} 
-              alt="customer" 
-              onDragStart={(e) => e.preventDefault()}
-              className="max-h-full max-w-full object-contain pointer-events-auto cursor-move"
-              style={{ 
-                transform: `translate3d(${position.x}px, ${position.y}px, 0) scale(${scale})`,
-                imageRendering: '-webkit-optimize-contrast',
-                WebkitBackfaceVisibility: 'hidden',
-                WebkitPerspective: '1000',
-                WebkitTransformStyle: 'preserve-3d',
-                willChange: 'transform'
-              }}
-            />
-            <div className="absolute bottom-8 right-5 z-20 pointer-events-auto">
-              <Button onClick={resetZoom} className="bg-blue-600 text-white shadow-xl h-10 px-6 rounded-2xl text-[14px] font-black">화면 리셋</Button>
-            </div>
-          </div>
-        ) : (
-          <div className="text-slate-500 flex flex-col items-center gap-3"><User className="w-14 h-14 opacity-20" /><p className="text-xs font-bold uppercase tracking-widest">Search Customer</p></div>
-        )}
-      </section>
+  className="flex-1 relative bg-slate-200 flex items-center justify-center overflow-hidden touch-none"
+  onWheel={handleWheel}
+  onMouseDown={(e) => handleStart(e.clientX, e.clientY)}
+  onMouseMove={(e) => handleMove(e.clientX, e.clientY)}
+  onMouseUp={() => setIsDragging(false)}
+  onMouseLeave={() => setIsDragging(false)}
+  onTouchStart={handleTouchStart}
+  onTouchMove={handleTouchMove}
+  onTouchEnd={() => { setIsDragging(false); setInitialDistance(null); }}
+>
+  {customer ? (
+    <div className="w-full h-full flex items-center justify-center relative pointer-events-none overflow-hidden">
+      <img 
+        src={customer.image_url} 
+        alt="customer" 
+        onDragStart={(e) => e.preventDefault()}
+        className="max-h-full max-w-full object-contain pointer-events-auto cursor-move"
+        style={{ 
+          transform: `translate3d(${position.x}px, ${position.y}px, 0) scale(${scale})`,
+          imageRendering: '-webkit-optimize-contrast',
+          WebkitBackfaceVisibility: 'hidden',
+          WebkitPerspective: '1000',
+          WebkitTransformStyle: 'preserve-3d',
+          willChange: 'transform'
+        }}
+      />
+      
+      {/* --- 우측 하단 버튼 모음 --- */}
+      <div className="absolute bottom-8 right-5 z-20 pointer-events-auto flex flex-col gap-2">
+        <Button 
+          onClick={resetZoom} 
+          className="bg-white/90 text-slate-800 border border-slate-200 shadow-xl h-10 px-6 rounded-2xl text-[14px] font-black hover:bg-white"
+        >
+          화면 리셋
+        </Button>
+        
+        <Button 
+          onClick={() => window.open(customer.image_url, '_blank')} 
+          className="bg-blue-600 text-white shadow-xl h-10 px-6 rounded-2xl text-[14px] font-black"
+        >
+          원본 보기
+        </Button>
+      </div>
+    </div>
+  ) : (
+    <div className="text-slate-500 flex flex-col items-center gap-3">
+      <User className="w-14 h-14 opacity-20" />
+      <p className="text-xs font-bold uppercase tracking-widest">Search Customer</p>
+    </div>
+  )}
+</section>
     </main>
   );
 }
